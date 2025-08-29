@@ -1,26 +1,30 @@
-/**
- * Welcome to Cloudflare Workers! This is your first worker.
- *
- * - Run `npm run dev` in your terminal to start a development server
- * - Open a browser tab at http://localhost:8787/ to see your worker in action
- * - Run `npm run deploy` to publish your worker
- *
- * Bind resources to your worker in `wrangler.jsonc`. After adding bindings, a type definition for the
- * `Env` object can be regenerated with `npm run cf-typegen`.
- *
- * Learn more at https://developers.cloudflare.com/workers/
- */
-
 export default {
-	async fetch(request, env, ctx): Promise<Response> {
-		const url = new URL(request.url);
-		switch (url.pathname) {
-			case '/message':
-				return new Response('Hello, World!');
-			case '/random':
-				return new Response(crypto.randomUUID());
-			default:
-				return new Response('Not Found', { status: 404 });
-		}
-	},
-} satisfies ExportedHandler<Env>;
+  async fetch(request: Request, env: unknown, ctx: ExecutionContext): Promise<Response> {
+    const clientIP = request.headers.get("cf-connecting-ip") || "unknown";
+    const country = request.headers.get("cf-ipcountry") || "unknown";
+    const ua = request.headers.get("user-agent") || "unknown";
+
+    const url = new URL(request.url);
+    const method = request.method;
+    const now = new Date().toISOString();
+
+    // ✅ log ใน Cloudflare Workers > Logs
+    console.log(
+      `[${now}] ${method} ${url.pathname} | IP: ${clientIP} | Country: ${country} | UA: ${ua}`
+    );
+
+    // ✅ ส่ง response กลับเป็น JSON
+    const body = {
+      timestamp: now,
+      ip: clientIP,
+      country,
+      userAgent: ua,
+      method,
+      path: url.pathname,
+    };
+
+    return new Response(JSON.stringify(body, null, 2), {
+      headers: { "Content-Type": "application/json" },
+    });
+  },
+};
